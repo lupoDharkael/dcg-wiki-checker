@@ -19,12 +19,27 @@ page_templates = ['ST1-{:02d}', 'ST2-{:02d}', 'ST3-{:02d}', 'ST4-{:02d}', 'ST5-{
     'ST7-{:02d}', 'ST8-{:02d}', 'ST9-{:02d}', 'ST10-{:02d}', 'ST12-{:02d}', 'ST13-{:02d}', 'P-{:03d}', 'BT1-{:03d}', 'BT2-{:03d}',
     'BT3-{:03d}', 'BT4-{:03d}', 'BT5-{:03d}', 'BT6-{:03d}', 'EX1-{:03d}', 'BT7-{:03d}', 'BT8-{:03d}',
     'EX2-{:03d}', 'BT9-{:03d}', 'BT10-{:03d}',
-    'EX3-{:03d}']
+    'EX3-{:03d}', 'BT11-{:03d}']
 
 series_name_list = ["ST-1: Gaia Red", "ST-2: Cocytus Blue", "ST-3: Heaven's Yellow",
     "ST-4: Giga Green", "ST-5: Mugen Black", "ST-6: Venomous Violet", "ST-7: Gallantmon",
     "ST-8: UlforceVeedramon", "ST-9: Ultimate Ancient Dragon", "ST-10: Parallel World Tactician",
-    "ST-12: Starter Deck Jesmon", "ST-13: Starter Deck RagnaLoardmon", "Promo: Promotional Cards", "BT-01: New Evolution", "BT-02: Ultimate Power", "BT-03: Union Impact", "BT-04: Great Legend", "BT-05: Battle of Omega", "BT-06: Double Diamond", "EX-01: Classic Collection", "BT-07: Next Aventure", "BT-08: New Hero", "EX-02: Digital Hazard", "BT-09: X Record", "BT-10: Xros Encounter", "EX-03: Draconic Roar"]
+    "ST-12: Starter Deck Jesmon", "ST-13: Starter Deck RagnaLoardmon", "Promo: Promotional Cards", "BT-01: New Evolution", "BT-02: Ultimate Power", "BT-03: Union Impact", "BT-04: Great Legend", "BT-05: Battle of Omega", "BT-06: Double Diamond", "EX-01: Classic Collection", "BT-07: Next Aventure", "BT-08: New Hero", "EX-02: Digital Hazard", "BT-09: X Record", "BT-10: Xros Encounter", "EX-03: Draconic Roar", "BT-11: Dimensional Phase"]
+
+
+report_res = []
+
+def report_err(id, name, err):
+    err_msg = id + ' ' + name + ': ' + err + '.'
+    print(err_msg)
+    report_res.append(err_msg)
+
+
+def print_report():
+    print("---------------")
+    print("Report summary:")
+    for e in report_res:
+        print(e)
 
 
 class CollectionChecker(object):
@@ -36,9 +51,6 @@ class CollectionChecker(object):
 
     def __init__(self, session):
                 self._session = session
-
-    def report(self, id, name, err):
-        print(id + ' ' + name + ': ' + err + '.')
 
     def check_card_wikitext(self, card_wikitext, page_id) -> dict:
         card_data = {}
@@ -63,54 +75,64 @@ class CollectionChecker(object):
         if card_data['cardtype'] == 'Digi-Egg':
             # LEVEL
             if card_data['level'] != '2':
-                report(page_id, card_data['name'], '"cardtype" defined as "Digi-Egg" but its "level" is not 2')
+                report_err(page_id, card_data['name'], '"cardtype" defined as "Digi-Egg" but its "level" is not 2')
             # TYPE
             if 'type' not in card_data:
-                report(page_id, card_data['name'], '"type" not defined')
+                report_err(page_id, card_data['name'], '"type" not defined')
         # DIGIMON CHECKS
         elif card_data['cardtype'] == 'Digimon':
             # LEVEL
             if 'level' not in card_data:
-                report(page_id, card_data['name'], '"level" not defined')
+                report_err(page_id, card_data['name'], '"level" not defined')
+            elif not card_data['level'].isnumeric():
+                report_err(page_id, card_data['name'], '"level" is not a number')
             elif card_data['level'] < self._last_level:
-                report(page_id, card_data['name'], '"level" = ' + card_data['level'] + ' and previous digimon card had level ' + self._last_level)
+                report_err(page_id, card_data['name'], '"level" = ' + card_data['level'] + ' and previous digimon card had level ' + self._last_level)
             else:
                 self._last_level = card_data['level']
             # PLAYCOST
             if 'playcost' not in card_data:
-                report(page_id, card_data['name'], '"playcost" not defined')
+                report_err(page_id, card_data['name'], '"playcost" not defined')
+            elif not card_data['playcost'].isnumeric():
+                report_err(page_id, card_data['name'], '"playcost" is not a number')
             elif int(card_data['playcost']) >= MAX_PLAYCOST:
-                report(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'])
+                report_err(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'])
             elif int(card_data['playcost']) < self._last_cost:
-                report(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'] + ' and previous digimon card had playcost ' + self._last_cost)
+                report_err(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'] + ' and previous digimon card had playcost ' + self._last_cost)
             else:
                 self._last_cost = int(card_data['playcost'])
             # DP
             if 'dp' not in card_data:
-                report(page_id, card_data['name'], '"dp" not defined')
+                report_err(page_id, card_data['name'], '"dp" not defined')
+            elif not card_data['dp'].isnumeric():
+                report_err(page_id, card_data['name'], '"dp" is not a number')
             # TYPE
             if 'type' not in card_data:
-                report(page_id, card_data['name'], '"type" not defined')
+                report_err(page_id, card_data['name'], '"type" not defined')
         # TAMER CHECKS
         elif card_data['cardtype'] == 'Tamer':
             # PLAYCOST
             if 'playcost' not in card_data:
-                report(page_id, card_data['name'], '"playcost" not defined')
+                report_err(page_id, card_data['name'], '"playcost" not defined')
+            elif not card_data['playcost'].isnumeric():
+                report_err(page_id, card_data['name'], '"playcost" is not a number')
             elif int(card_data['playcost']) >= MAX_PLAYCOST:
-                report(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'])
+                report_err(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'])
             elif int(card_data['playcost']) < self._last_cost:
-                report(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'] + ' and previous digimon card had playcost ' + self._last_cost)
+                report_err(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'] + ' and previous digimon card had playcost ' + self._last_cost)
             else:
                 self._last_cost = int(card_data['playcost'])
         # OPTION CHECKS
         else: # Option
             # PLAYCOST
             if 'playcost' not in card_data:
-                report(page_id, card_data['name'], '"playcost" not defined')
+                report_err(page_id, card_data['name'], '"playcost" not defined')
+            elif not card_data['playcost'].isnumeric():
+                report_err(page_id, card_data['name'], '"playcost" is not a number')
             elif int(card_data['playcost']) >= MAX_PLAYCOST:
-                report(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'])
+                report_err(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'])
             elif int(card_data['playcost']) < self._last_cost:
-                report(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'] + ' and previous digimon card had playcost ' + self._last_cost)
+                report_err(page_id, card_data['name'], '"playcost" = ' + card_data['playcost'] + ' and previous digimon card had playcost ' + self._last_cost)
             else:
                 self._last_cost = int(card_data['playcost'])
 
@@ -167,6 +189,7 @@ def main():
         idx = int(idx)
         cc = CollectionChecker(session)
         cc.check_collection(idx)
+    print_report()
 
 if __name__ == "__main__":
     try:
